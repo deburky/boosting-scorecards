@@ -1,0 +1,4 @@
+numpy==1.23.5
+pandas==1.5.3
+xgboost==1.7.5
+shap==0.41.0
