@@ -159,3 +159,18 @@ def generate_scorecard(bstr, PDO=50, standardSc_pts=500, standardSc_odds=19, pts
                                   standardSc_odds=standardSc_odds, pts_dec_prec=pts_dec_prec, 
                                   base_rate=base_rate)
     return pointscard
+
+def calculate_accuracy(df: pd.DataFrame, score, 
+                       target, sort_ascending: bool) -> pd.DataFrame:
+    sorted_df = df.sort_values(score, ascending=sort_ascending)
+    total_defaults = df[target].sum()
+    dictionary = {'threshold': [], 'share_defaults': []}
+    cumulative_defaults = 0
+    for _, row in sorted_df.iterrows():
+        cumulative_defaults += row[target]
+        threshold = row[score]
+        percent_defaults = cumulative_defaults / total_defaults
+        dictionary['threshold'].append(threshold)
+        dictionary['share_defaults'].append(percent_defaults)
+    result_df = pd.DataFrame(dictionary)
+    return result_df
