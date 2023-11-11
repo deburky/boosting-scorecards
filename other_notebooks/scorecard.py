@@ -10,7 +10,7 @@ def get_booster_leafs(bstr):
     
 def get_tree_traceback(mdf_leafs, mdf_parents): 
     tree_traceback = pd.DataFrame()
-    itr = 0 
+    itr = 0
     itrs = str(itr)
     while mdf_leafs.shape[0] > 0:
         NoSprout = pd.merge(mdf_leafs, mdf_parents, how='inner', left_on='ID'+itrs, right_on='No')
@@ -19,27 +19,42 @@ def get_tree_traceback(mdf_leafs, mdf_parents):
         MissingSprout.Split = np.nan
 
         itr += 1
-        itrs = str(itr)    
-        NoSprout.insert(NoSprout.shape[1]-4, 'Sign'+itrs, '>=')
-        YesSprout.insert(YesSprout.shape[1]-4, 'Sign'+itrs, '<')
-        MissingSprout.insert(MissingSprout.shape[1]-4, 'Sign'+itrs, '.')
-        mdf_leafs = pd.concat([NoSprout, YesSprout, MissingSprout]) 
-        mdf_leafs.rename(columns={'ID':'ID'+itrs, 'Split':'Split'+itrs, 'Feature':'Feature'+itrs, 'Node':'Node'+itrs, 
-                                 'Yes':'Yes'+itrs, 'No':'No'+itrs, 'Missing':'Missing'+itrs}, inplace=True)
+        itrs = str(itr)
+        NoSprout.insert(NoSprout.shape[1]-4, f'Sign{itrs}', '>=')
+        YesSprout.insert(YesSprout.shape[1]-4, f'Sign{itrs}', '<')
+        MissingSprout.insert(MissingSprout.shape[1]-4, f'Sign{itrs}', '.')
+        mdf_leafs = pd.concat([NoSprout, YesSprout, MissingSprout])
+        mdf_leafs.rename(
+            columns={
+                'ID': f'ID{itrs}',
+                'Split': f'Split{itrs}',
+                'Feature': f'Feature{itrs}',
+                'Node': f'Node{itrs}',
+                'Yes': f'Yes{itrs}',
+                'No': f'No{itrs}',
+                'Missing': f'Missing{itrs}',
+            },
+            inplace=True,
+        )
 
-        tree_traceback = tree_traceback.append(mdf_leafs.loc[mdf_leafs['Node'+itrs]==0,:], sort=False)
-        mdf_leafs = mdf_leafs[mdf_leafs['Node'+itrs]!=0]
+        tree_traceback = tree_traceback.append(
+            mdf_leafs.loc[mdf_leafs[f'Node{itrs}'] == 0, :], sort=False
+        )
+        mdf_leafs = mdf_leafs[mdf_leafs[f'Node{itrs}'] != 0]
 
     ttb_missing = tree_traceback.copy()
     ttb_non_missing = tree_traceback.copy()
     for i in range(1,itr+1): 
-        ttb_missing = ttb_missing[(ttb_missing['Sign'+str(i)] == '.') | ttb_missing['Sign'+str(i)].isna()]
-        ttb_non_missing = ttb_non_missing[ttb_non_missing['Sign'+str(i)] != '.']
+        ttb_missing = ttb_missing[
+            (ttb_missing[f'Sign{str(i)}'] == '.')
+            | ttb_missing[f'Sign{str(i)}'].isna()
+        ]
+        ttb_non_missing = ttb_non_missing[ttb_non_missing[f'Sign{str(i)}'] != '.']
 
     ttb = ttb_non_missing.copy()
     ttb.sort_values(['Tree', 'Split1', 'Sign1'], inplace=True, na_position='first')
     ttb.reset_index(drop=True, inplace=True)
-    
+
     return ttb, ttb_missing, tree_traceback, mdf_leafs, itr, itrs
 
 def setup_scorecard(ttb, ttb_missing, itr):
@@ -49,19 +64,24 @@ def setup_scorecard(ttb, ttb_missing, itr):
     sc_df['Split'] = ttb.Split1.values
 
     for i in range(1,itr): 
-        replace_in_sc = ( ( sc_df['Sign']=='>=').values 
-                            & (ttb['Split'+str(i)] < ttb['Split'+str(i+1)]).values 
-                            & (ttb['Feature'+str(i)] == ttb['Feature'+str(i+1)]).values ) 
+        replace_in_sc = (
+            (sc_df['Sign'] == '>=').values
+            & (ttb[f'Split{str(i)}'] < ttb[f'Split{str(i + 1)}']).values
+        ) & (ttb[f'Feature{str(i)}'] == ttb[f'Feature{str(i + 1)}']).values 
 
-        sc_df.loc[replace_in_sc,'Sign'] = ttb['Sign'+str(i+1)][replace_in_sc].values
-        sc_df.loc[replace_in_sc,'Split'] = ttb['Split'+str(i+1)][replace_in_sc].values
+        sc_df.loc[replace_in_sc, 'Sign'] = ttb[f'Sign{str(i + 1)}'][
+            replace_in_sc
+        ].values
+        sc_df.loc[replace_in_sc, 'Split'] = ttb[f'Split{str(i + 1)}'][
+            replace_in_sc
+        ].values
 
     sc_df['Inc_Missing'] = sc_df.ID.isin(ttb_missing.ID0).astype(int) 
-    
+
     # Add XAddEvidence col
     cols = sc_df.columns.to_list()
-    cols.pop(cols.index('XAddEvidence')) 
-    sc_df = sc_df[cols+['XAddEvidence']] 
+    cols.pop(cols.index('XAddEvidence'))
+    sc_df = sc_df[cols+['XAddEvidence']]
     return sc_df
 
 def format_scorecard(sc_df):
@@ -155,7 +175,11 @@ def generate_scorecard(bstr, PDO=50, standardSc_pts=500, standardSc_odds=19, pts
     ttb, ttb_missing, tree_traceback, mdf_leafs, itr, itrs = get_tree_traceback(mdf_leafs, mdf_parents)
     sc_df = setup_scorecard(ttb, ttb_missing, itr)
     scorecard = format_scorecard(sc_df)
-    pointscard = setup_pointscard(scorecard, PDO=PDO, standardSc_pts=standardSc_pts, 
-                                  standardSc_odds=standardSc_odds, pts_dec_prec=pts_dec_prec, 
-                                  base_rate=base_rate)
-    return pointscard
+    return setup_pointscard(
+        scorecard,
+        PDO=PDO,
+        standardSc_pts=standardSc_pts,
+        standardSc_odds=standardSc_odds,
+        pts_dec_prec=pts_dec_prec,
+        base_rate=base_rate,
+    )
