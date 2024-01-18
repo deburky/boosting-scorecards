@@ -19,7 +19,7 @@ The methodology behind it is inspired by the NVIDIA GTC Talk "Machine Learning i
 ## Methods
 
 - `extract_leaf_weights`: Extracts leaf weights based on the XGBoost model.
-- `generate_scorecard`: Generates the scorecard by combining leaf weights with binning summary.
+- `construct_scorecard`: Construct the scorecard by combining leaf weights with binning summary.
 
 ## Example Usage
 
