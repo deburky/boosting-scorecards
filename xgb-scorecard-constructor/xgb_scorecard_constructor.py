@@ -5,39 +5,41 @@ import xgboost as xgb
 
 
 class XGBScorecardConstructor:
-
     """
-    A class for generating a scorecard from a trained XGBoost model.
-    The methodology follows the NVIDIA GTC talk
-    "Machine Learning in Retail Credit Risk" by Paul Edwards
+    Author: Denis Burakov (GitHub: http://github.com/deburky)
+
+    Description:
+    A class for generating a scorecard from a trained XGBoost model. The methodology is inspired by the NVIDIA GTC Talk
+    "Machine Learning in Retail Credit Risk" by Paul Edwards (GitHub: https://github.com/pedwardsada).
 
     Parameters:
     - xgb_model (xgboost.XGBClassifier): The trained XGBoost model.
-    - X_train (pd.DataFrame): The training data features.
-    - y_train (pd.Series): The training data labels.
+    - X_train (pd.DataFrame): Features of the training data.
+    - y_train (pd.Series): Labels of the training data.
 
     Methods:
     - extract_leaf_weights: Extracts leaf weights based on the XGBoost model.
     - generate_scorecard: Generates the scorecard by combining leaf weights with binning summary.
 
     Example usage:
-    ```
+    ```python
     # Instantiate the XGBScorecardConstructor
     scorecard_constructor = XGBScorecardConstructor(xgb_model, X_train, y_train)
-    
+
     # Generate the scorecard
     xgb_scorecard = scorecard_constructor.construct_scorecard()
-    
+
     # Print the scorecard
     print(xgb_scorecard)
     ```
 
-    The constructed scorecard includes information such as Tree, Node, Feature, Split, Sign, events,
-    non_events, total, event_rate, XAddEvidence, and WOE for each row.
-    
+    The constructed scorecard includes information such as Tree, Node, Feature, Split, Sign, Events,
+    NonEvents, Total, EventRate, XAddEvidence, and WOE for each tree and node.
+
     #TODO: add support for handling leafs with missing values
 
     """
+
     def __init__(self, xgb_model, X_train, y_train):
         self.xgb_model = xgb_model
         self.X_train = X_train
@@ -72,14 +74,18 @@ class XGBScorecardConstructor:
                 }
             )
             condition_df["Sign"] = sign
-            return condition_df[["Tree", "Node", "Feature", "Split", "Sign", "XAddEvidence"]]
+            return condition_df[
+                ["Tree", "Node", "Feature", "Sign", "Split", "XAddEvidence"]
+            ]
 
         # Merge on 'Yes' and 'No' ID (True = <, False = >=)
         yes_condition_df = merge_and_rename(leaf_gains, "Yes", "<")
         no_condition_df = merge_and_rename(leaf_gains, "No", ">=")
 
         # Concatenate the DataFrames
-        leaf_weights_df = pd.concat([yes_condition_df, no_condition_df], ignore_index=True)
+        leaf_weights_df = pd.concat(
+            [yes_condition_df, no_condition_df], ignore_index=True
+        )
         leaf_weights_df = leaf_weights_df.sort_values(by="Tree").reset_index(drop=True)
 
         return leaf_weights_df
@@ -87,14 +93,14 @@ class XGBScorecardConstructor:
     def construct_scorecard(self):
         # # retrieve base score
         base_score = float(
-            json.loads(self.booster_.save_config())["learner"][
-                "learner_model_param"
-                ]["base_score"]
+            json.loads(self.booster_.save_config())["learner"]["learner_model_param"][
+                "base_score"
+            ]
         )
 
         # Prepare data for binning summary
+        # In newer XGBoost versions there is no need to convert base_score to logit
         scores = np.full((self.X_train.shape[0],), base_score)
-        print(self.booster_.attr('base_score'))
         Xy_train = xgb.DMatrix(self.X_train, label=self.y_train, base_margin=scores)
 
         n_rounds = self.booster_.num_boosted_rounds()
@@ -104,6 +110,7 @@ class XGBScorecardConstructor:
         df_leafs = pd.DataFrame()
         df_binning_table = pd.DataFrame()
 
+        # adopted from here: https://xgboost.readthedocs.io/en/latest/python/examples/individual_trees.html
         for i in range(n_rounds):
             if i == 0:
                 # predict leaf index
@@ -113,20 +120,21 @@ class XGBScorecardConstructor:
                 # predict margin
                 tree_leafs = self.booster_.predict(
                     Xy_train, iteration_range=(0, i + 1), output_margin=True
-                )
-
+                ) - scores
             else:
-                # predict leaf index
+                # Predict leaf index
                 tree_leaf_idx = self.booster_.predict(
                     Xy_train, iteration_range=(0, i + 1), pred_leaf=True
                 )[:, -1]
-                # predict margin
+                # Predict margin
                 tree_leafs = (
-                    self.booster_.predict(Xy_train, iteration_range=(i, i + 1), output_margin=True)
+                    self.booster_.predict(
+                        Xy_train, iteration_range=(i, i + 1), output_margin=True
+                    )
                     - scores
                 )
 
-            # get counts of events and non-events
+            # Get counts of events and non-events
             index_and_label = pd.concat(
                 [
                     pd.Series(tree_leaf_idx, name="leaf_idx"),
@@ -134,36 +142,84 @@ class XGBScorecardConstructor:
                 ],
                 axis=1,
             )
+            # Create a binning table
+            binning_table = (
+                index_and_label.groupby("leaf_idx").agg(["sum", "count"]).reset_index()
+            ).astype(float)
+            binning_table.columns = ["leaf_idx", "Events", "Total"]
+            binning_table["tree"] = i
+            binning_table["NonEvents"] = (
+                binning_table["Total"] - binning_table["Events"]
+            )
+            binning_table["EventRate"] = (
+                binning_table["Events"] / binning_table["Total"]
+            )
+            binning_table = binning_table[
+                ["tree", "leaf_idx", "Events", "NonEvents", "Total", "EventRate"]
+            ]
 
-            binning_table = index_and_label.groupby("leaf_idx").agg(["sum", "count"]).reset_index()
-            binning_table.columns = ['leaf_idx', 'events', 'total']
-            binning_table['tree'] = i
-            binning_table['non_events'] = binning_table['total'] - binning_table['events']
-            binning_table['event_rate'] = binning_table['events'] / binning_table['total']
-            binning_table = binning_table[['tree', 'leaf_idx', 'events', 'non_events', 'total', 'event_rate']]
-
-            # aggregate trees
+            # Aggregate leaf indices, leafs, and counts of events and non-events
             df_indexes = pd.concat(
                 [df_indexes, pd.Series(tree_leaf_idx, name=f"tree_{i}")], axis=1
             )
-            df_leafs = pd.concat([df_leafs, pd.Series(tree_leafs, name=f"tree_{i}")], axis=1)
+            df_leafs = pd.concat(
+                [df_leafs, pd.Series(tree_leafs, name=f"tree_{i}")], axis=1
+            )
             df_binning_table = pd.concat([df_binning_table, binning_table], axis=0)
 
-        # Extract leaf weights
-        df_x_add_evidence = self.extract_leaf_weights()
-        df_scorecard = df_x_add_evidence.merge(df_binning_table, left_on=['Tree', 'Node'], right_on=['tree', 'leaf_idx'], how='left').drop(['tree', 'leaf_idx'], axis=1)
-        df_scorecard = df_scorecard[['Tree', 'Node', 'Feature', 'Split', 'Sign', 'events', 'non_events', 'total', 'event_rate', 'XAddEvidence']]
+            # Extract leaf weights (XAddEvidence)
+            df_x_add_evidence = self.extract_leaf_weights()
+            df_scorecard = df_x_add_evidence.merge(
+                df_binning_table,
+                left_on=["Tree", "Node"],
+                right_on=["tree", "leaf_idx"],
+                how="left",
+            ).drop(["tree", "leaf_idx"], axis=1)
+            df_scorecard = df_scorecard[
+                [
+                    "Tree",
+                    "Node",
+                    "Feature",
+                    "Sign",
+                    "Split",
+                    "Events",
+                    "NonEvents",
+                    "Total",
+                    "EventRate",
+                    "XAddEvidence"
+                ]
+            ]
+            
+            # Sort by Tree and Node
+            df_scorecard = df_scorecard.sort_values(by=["Tree", "Node"]).reset_index(
+                drop=True
+            )
+            # Calculate the cumulative sum of NonEvents and Events for each tree
+            df_scorecard["CumNonEvents"] = df_scorecard.groupby("Tree")[
+                "NonEvents"
+            ].transform("sum")
+            df_scorecard["CumEvents"] = df_scorecard.groupby("Tree")[
+                "Events"
+            ].transform("sum")
 
-        # Calculate the cumulative sum of 'non_events' and 'events' for each tree
-        df_scorecard['cum_non_events'] = df_scorecard.groupby('Tree')['non_events'].transform('sum')
-        df_scorecard['cum_events'] = df_scorecard.groupby('Tree')['events'].transform('sum')
+            # Calculate Weight-of-Evidence (WOE)
+            df_scorecard["WOE"] = np.log(
+                (df_scorecard["NonEvents"] / df_scorecard["CumNonEvents"])
+                / (df_scorecard["Events"] / df_scorecard["CumEvents"])
+            ).replace([np.inf, -np.inf], 0) # type: ignore
 
-        # Calculate WOE for each row
-        df_scorecard['WOE'] = np.log(
-            (df_scorecard['non_events'] / df_scorecard['cum_non_events'])
-            /
-            (df_scorecard['events'] / df_scorecard['cum_events'])
-        )
-
-        return df_scorecard[['Tree', 'Node', 'Feature', 'Split', 'Sign', 'events', 'non_events', 'total', 'event_rate', 'XAddEvidence', 'WOE']]
-    
+        return df_scorecard[
+            [
+                "Tree",
+                "Node",
+                "Feature",
+                "Sign",
+                "Split",
+                "Events",
+                "NonEvents",
+                "Total",
+                "EventRate",
+                "XAddEvidence",
+                "WOE"
+            ]
+        ]
