@@ -6,11 +6,14 @@
 
 This Python class is designed to generate a scorecard from a trained XGBoost model.
 
-In this early version, it can be seen as an extension of `trees_to_dataframe()` method in XGBoost similar to Decision Tree (number of samples, class counts etc) or Weight-of-Evidence (WOE) summaries in [OptBinning](https://gnpalencia.org/optbinning/index.html). It also leverages `xgb2sql` library for creating full tree split tracebacks.
+In this early version, it can be seen as an extension of `trees_to_dataframe()` method in XGBoost similar to Decision Tree (number of samples, class counts etc) or Weight-of-Evidence (WOE) summaries in [OptBinning](https://gnpalencia.org/optbinning/index.html). It also reuses the codebase from `xgb2sql` library for creating full tree split tracebacks. Possibly, SQL deployment of an XGBoost scorecard will be added in the future.
 
-Future enhancements will include employing a Pointwise Decile (PDO) technique for scorecard point assignment and integrating explainability features to enhance the interpretability of the model. The methodology behind this class is inspired by the NVIDIA GTC Talk "Machine Learning in Retail Credit Risk" by Paul Edwards ([GitHub](https://github.com/pedwardsada)).
+Future enhancements will include employing a Points to Double the Odds (PDO) technique for scorecard point assignment and integrating explainability features to enhance the interpretability of the model. The methodology behind this class is inspired by the NVIDIA GTC Talk "Machine Learning in Retail Credit Risk" by Paul Edwards ([GitHub](https://github.com/pedwardsada)).
 
-his preliminary version of the scorecard constructor is still under optimization for performance, but it provides a foundation for developing a more comprehensive and robust scorecard generation tool.
+<blockquote>
+This preliminary version of the scorecard constructor is still under optimization for performance, but it provides a foundation for developing a more comprehensive and robust scorecard generation tool.
+</blockquote>
+
 ## Versioning
 
 | Version | Date | Changes |
@@ -49,6 +52,8 @@ xgb_scorecard = scorecard_constructor.construct_scorecard()
 # Print the scorecard
 print(xgb_scorecard)
 ```
+
+![image](./xgboost_scorecard_example.png)
 
 ## Version: `v1.1`
 
