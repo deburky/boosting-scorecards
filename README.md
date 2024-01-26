@@ -2,7 +2,7 @@
 
 Welcome to the Scorecard Boosting repository! 🎉
 
-Scorecard boosting is an innovative methodology for constructing credit scorecards by leveraging advanced machine learning (ML) techniques, specifically gradient boosting, that [emerged](https://blogs.nvidia.com/blog/ai-credit-risk-scotiabank/) in the domain of Credit Risk.
+Scorecard boosting is an innovative methodology for constructing credit scorecards by leveraging advanced machine learning (ML) techniques, specifically gradient boosting, that [emerged in the domain of Credit Risk](https://blogs.nvidia.com/blog/ai-credit-risk-scotiabank/).
 
 ## Gradient Boosting 📈
 
@@ -10,7 +10,7 @@ Scorecard boosting is an innovative methodology for constructing credit scorecar
 
 [Gradient boosting](https://en.wikipedia.org/wiki/Gradient_boosting), which lies at the 💚 of scorecard boosting, is an ML technique that builds a predictive model by combining the outputs of multiple "weak" models, typically decision trees, to create a strong predictive model. 
 
-The algorithm works sequentially, with each new model focusing on correcting errors made by the previous ones. It minimizes a loss function by adding new models to the ensemble, and the final prediction is the weighted sum of the predictions from all models.
+The algorithm works sequentially, with each new model focusing on correcting errors made by the previous ones. It minimizes a loss function by adding new models to the ensemble, and the final prediction is the sum of the predictions from all models.
 
 One of the most known frameworks for gradient boosting with decision trees is [XGBoost](https://web.njit.edu/~usman/courses/cs675_fall16/BoostedTree.pdf). XGBoost is an optimized distributed gradient boosting library designed to be highly efficient, flexible, and portable.
 
@@ -28,7 +28,7 @@ To familiarize yourself further with gradient boosting and XGBoost follow the li
 
 Boosted scorecards built on top of gradient-boosted trees allow to improve performance metrics like Gini score and Kolmogorov-Smirnov (KS) statistic compared to standard tools, while maintaining the interpretability of traditional scorecards. 📊 This is achieved by combining the best of both worlds: the interpretability of scorecards and the predictive power of gradient boosting. 🌐
 
-A boosted scorecard can be seen as a collection of sequential decision trees transformed into a traditional scorecard format. 🌲 This scorecard comprises rules essential for computing a score, an evaluative measure of an applicant's creditworthiness or an existing customer. Typically ranging from 300 to 850, this score can be further customized using the Points to Double the Odds (PDO) technique, a concept extendable to gradient boosted decision trees.
+A boosted scorecard can be seen as a collection of sequential decision trees transformed into a traditional scorecard format. 🌲 This scorecard comprises rules essential for computing a credit score, an evaluative measure of creditworthiness of new or existing customers. Typically ranging from 300 to 850, this score can be further customized using the Points to Double the Odds (PDO) technique, a concept extendable to gradient boosted decision trees.
 
 Below we can see how the number of boosting iterations affects the distribution of boosted credit scores among good and bad customers:
 
