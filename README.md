@@ -8,7 +8,9 @@ Welcome to the Scorecard Boosting repository! 🎉
 
 * A boosted scorecard can be seen as a collection of sequential decision trees transformed into a traditional scorecard format. 🌲 This scorecard comprises rules essential for computing a score, an evaluative measure of an applicant's creditworthiness or an existing customer. Typically ranging from 300 to 850, this score can be further customized using the Points to Double the Odds (PDO) technique, a concept extendable to gradient boosted decision trees.
 
-![Image](./learning_curve.gif)
+Below we show the distribution of credit scores among good and bad risk depending on the number of boosting iterations:
+
+![Image](./score_distribution_animation.gif)
 
 ## Repository Contents 📚
 
