@@ -2,15 +2,41 @@
 
 Welcome to the Scorecard Boosting repository! 🎉
 
-* Scorecard boosting is an innovative methodology for constructing credit scorecards by leveraging advanced Machine Learning (ML) techniques, specifically gradient boosting.
+Scorecard boosting is an innovative methodology for constructing credit scorecards by leveraging advanced machine learning (ML) techniques, specifically gradient boosting, that [emerged](https://blogs.nvidia.com/blog/ai-credit-risk-scotiabank/) in the domain of Credit Risk.
 
-* Boosted scorecards allow to improve performance metrics like Gini score and Kolmogorov-Smirnov (KS) statistic, while maintaining the interpretability of traditional scorecards. 📊 This is achieved by combining the best of both worlds: the interpretability of scorecards and the predictive power of gradient boosting. 🌐
+## Gradient Boosting 📈
 
-* A boosted scorecard can be seen as a collection of sequential decision trees transformed into a traditional scorecard format. 🌲 This scorecard comprises rules essential for computing a score, an evaluative measure of an applicant's creditworthiness or an existing customer. Typically ranging from 300 to 850, this score can be further customized using the Points to Double the Odds (PDO) technique, a concept extendable to gradient boosted decision trees.
+![Image](./learning_curve.gif)
 
-Below we show the distribution of credit scores among good and bad risk depending on the number of boosting iterations:
+[Gradient boosting](https://en.wikipedia.org/wiki/Gradient_boosting), which lies at the 💚 of scorecard boosting, is an ML technique that builds a predictive model by combining the outputs of multiple "weak" models, typically decision trees, to create a strong predictive model. 
 
-![Image](./score_distribution_animation.gif)
+The algorithm works sequentially, with each new model focusing on correcting errors made by the previous ones. It minimizes a loss function by adding new models to the ensemble, and the final prediction is the weighted sum of the predictions from all models.
+
+One of the most known frameworks for gradient boosting with decision trees is [XGBoost](https://web.njit.edu/~usman/courses/cs675_fall16/BoostedTree.pdf). XGBoost is an optimized distributed gradient boosting library designed to be highly efficient, flexible, and portable.
+
+For binary classification tasks like credit scoring, XGBoost performs a form of Logistic Regression. The algorithm is trained to minimize the [log loss](https://en.wikipedia.org/wiki/Cross_entropy#Cross-entropy_loss_function_and_logistic_regression) function, which is the negative log-likelihood of the true labels given a probabilistic model.
+
+The algorithm used in XGBoost Logistic Regression follows the Newton-Raphson method, which was described by [J. Friedman (2001)](https://projecteuclid.org/journals/annals-of-statistics/volume-29/issue-5/Greedy-function-approximation-A-gradient-boosting-machine/10.1214/aos/1013203451.full). XGBoost Logistic Regression also has ties to LogitBoost, which was described by [J. Friedman et al. (2000)](https://projecteuclid.org/journals/annals-of-statistics/volume-28/issue-2/Additive-logistic-regression--a-statistical-view-of-boosting-With/10.1214/aos/1016218223.full#:~:text=Boosting%20works%20by%20sequentially%20applying,in%20dramatic%20improvements%20in%20performance).
+
+To familiarize yourself further with gradient boosting and XGBoost follow the links below:
+* [How to explain gradient boosting](https://explained.ai/gradient-boosting/)
+* [Understanding Gradient Boosting as a gradient descent](https://nicolas-hug.com/blog/gradient_boosting_descent)
+* [Around Gradient Boosting: Classification, Missing Values, Second Order Derivatives, and Line Search](https://nicolas-hug.com/blog/around_gradient_boosting)
+* [How Does Extreme Gradient Boosting (XGBoost) Work?](https://cengiz.me/posts/extreme-gradient-boosting/)
+
+## Bosted scorecards 📈
+
+Boosted scorecards built on top of gradient-boosted trees allow to improve performance metrics like Gini score and Kolmogorov-Smirnov (KS) statistic compared to standard tools, while maintaining the interpretability of traditional scorecards. 📊 This is achieved by combining the best of both worlds: the interpretability of scorecards and the predictive power of gradient boosting. 🌐
+
+A boosted scorecard can be seen as a collection of sequential decision trees transformed into a traditional scorecard format. 🌲 This scorecard comprises rules essential for computing a score, an evaluative measure of an applicant's creditworthiness or an existing customer. Typically ranging from 300 to 850, this score can be further customized using the Points to Double the Odds (PDO) technique, a concept extendable to gradient boosted decision trees.
+
+Below we can see how the number of boosting iterations affects the distribution of boosted credit scores among good and bad customers:
+
+![Image](./score_distribution_animation_estimators.gif)
+
+Additionally, we can see how the depth of the gradient boosting ensemble affects the distribution of boosted credit scores among good and bad customers:
+
+![Image](./score_distribution_animation_depth.gif)
 
 ## Repository Contents 📚
 
