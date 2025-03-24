@@ -1,0 +1,10 @@
+tmp/
+.env
+.venv/
+__pycache__/
+.ruff_cache/
+**.parquet
+**.csv
+**.json
+**.log
+**.cbm
