@@ -194,33 +194,41 @@ class CatBoostTreeVisualizer:
                 condition = level_conditions[level]
 
                 # Handle index-based condition
-                if is_index_based and CatBoostScorecard._is_numeric_only_condition(
-                    condition
+                if (
+                    is_index_based
+                    and hasattr(CatBoostScorecard, "_is_numeric_only_condition")
+                    and CatBoostScorecard._is_numeric_only_condition(condition)
                 ):
                     feature_idx = int(condition.strip())
                     if feature_names and 0 <= feature_idx < len(feature_names):
                         # Show feature name if available
-                        display_condition = feature_names[feature_idx]
+                        display_condition = (
+                            f"{feature_names[feature_idx]}, value>threshold"
+                        )
                     else:
-                        # Otherwise just show the index
-                        display_condition = str(feature_idx)
+                        # Otherwise just show the index with proper formatting
+                        display_condition = f"{feature_idx}, value>threshold"
 
                 # Handle feature-name-based condition
                 else:
-                    feature, value, split_type = (
-                        CatBoostScorecard._get_split_feature_value(condition)
-                    )
+                    if hasattr(CatBoostScorecard, "_get_split_feature_value"):
+                        feature, value, split_type = (
+                            CatBoostScorecard._get_split_feature_value(condition)
+                        )
 
-                    if split_type == "categorical_value":
-                        # Format to match CatBoost's native visualization
-                        display_condition = f"{feature}, value={value}"
-                    elif split_type == "categorical_list":
-                        if isinstance(value, list) and len(value) == 1:
-                            display_condition = f"{feature}, value={value[0]}"
-                        else:
-                            display_condition = condition
-                    else:
-                        display_condition = condition
+                        if split_type == "numerical":
+                            # For numerical values, use "feature, value>threshold" format
+                            display_condition = f"{feature}, value>{value}"
+                        elif split_type == "categorical_value":
+                            # Use "feature = 'value'" format instead of "feature, value=value"
+                            display_condition = f"{feature}='{value}'"
+                        elif split_type == "categorical_list":
+                            if isinstance(value, list) and len(value) == 1:
+                                display_condition = f"{feature}='{value[0]}'"
+                            else:
+                                # For multi-value lists, keep current format or adjust as needed
+                                cat_str = ", ".join(f"'{c}'" for c in value)
+                                display_condition = f"{feature} IN ({cat_str})"
 
             # Important: Swap the Yes/No branch direction to match CatBoost native visualization
             yes_branch = build_node(
@@ -242,6 +250,7 @@ class CatBoostTreeVisualizer:
         self.tree_dump[str(tree_idx)] = build_node("", 0)
         return self.tree_dump[str(tree_idx)]
 
+    # pylint: disable=too-many-arguments, too-many-positional-arguments
     def _draw_tree(
         self,
         node: Dict[str, Any],

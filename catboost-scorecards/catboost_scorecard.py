@@ -5,14 +5,16 @@
 #   "pydantic>=2.0",
 #   "numpy>=1.0",
 #   "scikit-learn>=1.0",
+#   "matplotlib>=3.5",
+#   "types-pyarrow",
 # ]
 # ///
 
 """
-CatBoost Scorecard Extraction
+CatBoost Scorecard Script
 =================================
 This module provides functionality to extract data for scorecards from CatBoost models.
-It handles both numerical and categorical features, including text features.
+It handles both numerical and categorical features with one-hot encoding approach.
 
 Author: Denis Burakov
 Github: @deburky
