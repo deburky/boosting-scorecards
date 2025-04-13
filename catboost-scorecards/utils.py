@@ -95,10 +95,14 @@ class CatBoostTreeVisualizer:
             "edgewidth": 0,
             "font_size": 12,
             "figsize": (10, 5),
-            "level_distance": 2,
+            "level_distance": 1,
             "sibling_distance": 20.0,
         }
-        self.config |= self.plot_config
+        # Update the config with user-defined plot_config
+        try:
+            self.config |= self.plot_config
+        except TypeError:  # This will happen in Python < 3.9
+            self.config.update(self.plot_config)
 
     def build_tree(self, tree_idx: int) -> Dict[str, Any]:  # pylint: disable=too-many-statements, too-many-locals
         """Build a tree structure from the scorecard DataFrame, handling both tree types."""
@@ -218,7 +222,7 @@ class CatBoostTreeVisualizer:
 
                         if split_type == "numerical":
                             # For numerical values, use "feature, value>threshold" format
-                            display_condition = f"{feature}, value>{value}"
+                            display_condition = f"{feature}>{value}"
                         elif split_type == "categorical_value":
                             # Use "feature = 'value'" format instead of "feature, value=value"
                             display_condition = f"{feature}='{value}'"
@@ -282,8 +286,8 @@ class CatBoostTreeVisualizer:
         )
 
         if "children" in node:
-            for i, (label, child) in enumerate(node["children"].items()):
-                # Important: Swap left/right direction to match CatBoost's convention
+            for _, (label, child) in enumerate(node["children"].items()):
+                # Swap left/right direction to match CatBoost's convention
                 # Yes = right branch, No = left branch
                 offset = (1.0 if label == "Yes" else -1.0) * sibling_distance
                 child_x = pos_x + offset
@@ -333,7 +337,7 @@ class CatBoostTreeVisualizer:
         depth = _max_depth(tree)
 
         # Dynamically scale figsize and spacing
-        base_width = 10
+        base_width = 14
         base_height = 5
         width_per_level = 2.5
         sibling_scale = 4.0
@@ -355,7 +359,7 @@ class CatBoostTreeVisualizer:
             level_distance=self.config["level_distance"],
             sibling_distance=self.config["sibling_distance"],
         )
-        plt.title(f"CatBoost Tree {tree_idx + 1}", fontsize=12, fontfamily="monospace")
+        plt.title(f"CatBoost Tree {tree_idx + 1}", fontsize=14, fontfamily="monospace")
         plt.show()
 
     def print_debug_info(self) -> None:
