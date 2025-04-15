@@ -327,4 +327,3 @@ class CatBoostScorecard:
         if output_format == "arrow":
             return pa.Table.from_pandas(scorecard_df, preserve_index=False)
         return scorecard_df
-        return scorecard_df

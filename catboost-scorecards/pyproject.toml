@@ -1,0 +1,23 @@
+[project]
+name = "cb-scorecards"
+version = "0.1.0"
+description = "CatBoost Scorecards"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "catboost>=1.2.7",
+    "matplotlib>=3.10.1",
+    "pandas>=2.2.3",
+    "pyarrow>=19.0.1",
+    "pydantic>=2.11.3",
+    "scikit-learn>=1.6.1",
+]
+
+[dependency-groups]
+dev = [
+    "faker>=37.1.0",
+    "humanize>=4.12.2",
+    "ipykernel>=6.29.5",
+    "mypy>=1.15.0",
+    "ruff>=0.11.4",
+]
