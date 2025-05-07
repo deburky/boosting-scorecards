@@ -71,7 +71,7 @@ def create_feature_interaction_constraints(p_vars, data_dir):
     interaction_constraints = []
 
     dat_cols = pd.Index(p_vars)
-    ind_vars = sorted(set([item[0] for item in dat_cols.str.split('__')]))
+    ind_vars = sorted({item[0] for item in dat_cols.str.split('__')})
 
     for iv in ind_vars:
         if np.any(dat_cols.isin([iv])):
@@ -83,13 +83,13 @@ def create_feature_interaction_constraints(p_vars, data_dir):
 
         x_constraints.append(f_var_name + list(dat_cols[np.where(dat_cols.str.startswith(iv+'__'))[0]]) )
         interaction_constraints.append(f_var + list(np.where(dat_cols.str.startswith(iv+'__'))[0]))
-    
+
     # Save the constraints to file
     constraints_df = pd.DataFrame({'x_contraints':x_constraints, 
                                 'interaction_constraints':interaction_constraints})
     constraints_path = data_dir/'interaction_constraints.csv'
     constraints_df.to_csv(constraints_path, index=False)
-    
+
     return x_constraints, interaction_constraints, constraints_path
 
 def get_monotonic_constraints(monotonic_vars, p_vars, data_dir):
@@ -97,9 +97,7 @@ def get_monotonic_constraints(monotonic_vars, p_vars, data_dir):
     for mono_var in monotonic_vars:
         monotonic_constraints[mono_var] = 1
 
-    monotonic_constraints_str = "("+ ",".join([str(i) for i in monotonic_constraints.values]) +")"
-    
-    return monotonic_constraints_str
+    return "("+ ",".join([str(i) for i in monotonic_constraints.values]) +")"
 
 def load_training_data(run, data_dir, artifact_name:str, train_file='train.csv', val_file='val.csv'):
     data_art = run.use_artifact(artifact_name)
@@ -123,23 +121,23 @@ def calculate_credit_scores(n_samples=1000,  p_vars=None, pointscard=None, valda
             tree_dict[tree_id] = {'has_state_score':0,
                                  'has_manufacturer_score':0,
                                  'has_employment_score':0}
-            
+
             # For each row in that tree
             for criteria in pointscard.loc[[int(tree_id)]].iterrows():
                 sc_feature = criteria[1]['Feature']
                 sc_sign = criteria[1]['Sign']
                 sc_split = criteria[1]['Split']
                 sc_score = criteria[1]['Points']
-                
+
                 # If categorical variable
-                if sc_sign == '=':
-                    sc_col = sc_feature + '__' + sc_split
-                else: 
+                if sc_sign == '<':
                     sc_col = sc_feature
 
-                # Add Credit Scores
-                if sc_sign == '=':
-                    
+                    if val_row[1][sc_col] < sc_split:
+                        val_scores[i] += sc_score 
+
+                elif sc_sign == '=':
+                    sc_col = sc_feature + '__' + sc_split
                     # test if `sc_col` column exists
                     try:
                         if val_row[1][sc_col] == 1:
@@ -158,7 +156,7 @@ def calculate_credit_scores(n_samples=1000,  p_vars=None, pointscard=None, valda
                             sc_col = sc_feature + '__'
                             if val_row[1][sc_col] == 1:
                                 val_scores[i] += sc_score 
-                                
+
                                 if 'state' in sc_feature.lower(): 
                                     tree_dict[tree_id]['has_state_score'] = 1
                                 elif 'manufacturer_id' in sc_feature.lower(): 
@@ -166,30 +164,30 @@ def calculate_credit_scores(n_samples=1000,  p_vars=None, pointscard=None, valda
                                 elif 'employment' in sc_feature.lower(): 
                                     tree_dict[tree_id]['has_employment_score'] = 1
                         except: pass
-                    
+
                     # Assign scores for categorical values if they fall into the "OTHER" class
                     if 'state' in sc_feature.lower() and \
                         tree_dict[tree_id]['has_state_score'] == 0 \
                         and sc_split.lower() == 'other':
                         val_scores[i] += sc_score 
                         tree_dict[tree_id]['has_state_score'] = 1
-                    
+
                     elif 'manufacturer_id' in sc_feature.lower() and \
                         tree_dict[tree_id]['has_manufacturer_score'] == 0 and \
                         sc_split.lower() == 'other':
                         val_scores[i] += sc_score 
                         tree_dict[tree_id]['has_manufacturer_score'] = 1
-                    
+
                     elif 'employment' in sc_feature.lower() and \
                         tree_dict[tree_id]['has_employment_score'] == 0 and \
                         sc_split.lower() == 'other':
                         val_scores[i] += sc_score 
                         tree_dict[tree_id]['has_employment_score'] = 1
 
-                elif sc_sign == '<': 
-                    if val_row[1][sc_col] < sc_split:
-                        val_scores[i] += sc_score 
+                elif sc_sign == '>=':
+                    sc_col = sc_feature
 
-                elif sc_sign == '>=': 
                     if val_row[1][sc_col] >= sc_split:
                         val_scores[i] += sc_score
+                else:
+                    sc_col = sc_feature
