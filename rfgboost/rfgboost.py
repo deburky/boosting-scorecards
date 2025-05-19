@@ -1,11 +1,14 @@
 """rfgboost.py."""
 
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 from scipy.special import expit as sigmoid
 from scipy.stats import norm
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import TargetEncoder
+import warnings
 
 
 class RFGBoost:
@@ -211,6 +214,11 @@ class RFGBoost:
         self : object
             Returns self.
         """
+        if self.learning_rate > 0.5:
+            warnings.warn(
+                f"Learning rate {self.learning_rate} is high and may cause instability. "
+                "Typical values are 0.01 to 0.2."
+            )
         # Ensure y is numeric
         y_numeric = self._ensure_numeric(y)
 
@@ -243,10 +251,10 @@ class RFGBoost:
                 rf.fit(X_encoded, residuals)
                 update = rf.predict(X_encoded)
             elif self.task == "classification":
-                p = 1 / (1 + np.exp(-pred))
-                residuals = (y_numeric - p) / (
-                    p * (1 - p)
-                )  # Working response (FHT2000)
+                p = sigmoid(pred)
+                eps = 1e-5
+                p = np.clip(p, eps, 1 - eps)
+                residuals = (y_numeric - p) / (p * (1 - p))  # Working response (FHT2000)
                 rf = RandomForestRegressor(
                     **self.rf_params
                 )  # Use regression for gradients
@@ -281,7 +289,7 @@ class RFGBoost:
         for rf in self.models:
             pred += self.learning_rate * rf.predict(X_encoded)
 
-        return 1 / (1 + np.exp(-pred)) if self.task == "classification" else pred
+        return sigmoid(pred) if self.task == "classification" else pred
 
     def predict_proba(self, X):
         """
@@ -368,5 +376,185 @@ class RFGBoost:
         elif self.task == "regression":
             lower = pred_mean - z_crit * std
             upper = pred_mean + z_crit * std
+        else:
+            raise ValueError(f"Unknown task type: {self.task}")
 
         return np.vstack([lower, upper]).T
+
+    def extract_tree_data_with_conditions(self, tree_list=None, feature_names=None):
+        """
+        Extracts detailed information about all trees in the RFGBoost ensemble, 
+        including split conditions and child relationships.
+        Returns a DataFrame with all nodes (splits and leaves).
+        Columns: Round, Tree, NodeID, ...
+        """
+        if tree_list is None:
+            tree_list = self.models
+        if feature_names is None:
+            feature_names = self.feature_names_
+        tree_data = []
+        for round_idx, rf in enumerate(tree_list):
+            for tree_idx, tree in enumerate(rf.estimators_):
+                tree_ = tree.tree_
+                for node_id in range(tree_.node_count):
+                    value = tree_.value[node_id][0, 0]
+                    impurity = tree_.impurity[node_id]
+                    samples = tree_.n_node_samples[node_id]
+                    if tree_.children_left[node_id] != tree_.children_right[node_id]:
+                        left_condition = "<="
+                        right_condition = ">"
+                        feature = feature_names[tree_.feature[node_id]]
+                        threshold = tree_.threshold[node_id]
+                        tree_data.extend(
+                            [
+                                {
+                                    "Round": round_idx,
+                                    "Tree": tree_idx,
+                                    "NodeID": node_id,
+                                    "Feature": feature,
+                                    "Condition": left_condition,
+                                    "Threshold": threshold,
+                                    "Impurity": impurity,
+                                    "Samples": samples,
+                                    "Value": value,
+                                    "ChildType": "Left",
+                                    "ChildNodeID": tree_.children_left[node_id],
+                                },
+                                {
+                                    "Round": round_idx,
+                                    "Tree": tree_idx,
+                                    "NodeID": node_id,
+                                    "Feature": feature,
+                                    "Condition": right_condition,
+                                    "Threshold": threshold,
+                                    "Impurity": impurity,
+                                    "Samples": samples,
+                                    "Value": value,
+                                    "ChildType": "Right",
+                                    "ChildNodeID": tree_.children_right[node_id],
+                                },
+                            ]
+                        )
+                    else:
+                        tree_data.append(
+                            {
+                                "Round": round_idx,
+                                "Tree": tree_idx,
+                                "NodeID": node_id,
+                                "Feature": "Leaf",
+                                "Condition": None,
+                                "Threshold": None,
+                                "Impurity": impurity,
+                                "Samples": samples,
+                                "Value": value,
+                                "ChildType": None,
+                                "ChildNodeID": None,
+                            }
+                        )
+        return pd.DataFrame(tree_data)
+
+    def extract_leaf_nodes_with_conditions(self, tree_list=None, feature_names=None):
+        """
+        Extracts detailed information about leaf nodes and their corresponding path conditions for all trees in the RFGBoost ensemble.
+        Returns a DataFrame with leaves only and their path conditions.
+        """
+        if tree_list is None:
+            tree_list = self.models
+        if feature_names is None:
+            feature_names = self.feature_names_
+        leaf_data = []
+        for round_idx, rf in enumerate(tree_list):
+            for tree_idx, tree in enumerate(rf.estimators_):
+                tree_ = tree.tree_
+
+                def trace_conditions(node_id, path_conditions):
+                    value = tree_.value[node_id][0, 0]
+                    impurity = tree_.impurity[node_id]
+                    samples = tree_.n_node_samples[node_id]
+                    if tree_.children_left[node_id] == tree_.children_right[node_id]:
+                        leaf_data.append(
+                            {
+                                "Round": round_idx,
+                                "Tree": tree_idx,
+                                "NodeID": node_id,
+                                "PathCondition": " and ".join(path_conditions)
+                                if path_conditions
+                                else None,
+                                "Impurity": impurity,
+                                "Samples": samples,
+                                "Value": value,
+                            }
+                        )
+                    else:
+                        feature = feature_names[tree_.feature[node_id]]
+                        threshold = tree_.threshold[node_id]
+                        trace_conditions(
+                            tree_.children_left[node_id],
+                            path_conditions + [f"{feature} <= {threshold:.4f}"],
+                        )
+                        trace_conditions(
+                            tree_.children_right[node_id],
+                            path_conditions + [f"{feature} > {threshold:.4f}"],
+                        )
+
+                trace_conditions(0, [])
+        return pd.DataFrame(leaf_data)
+
+    def trees_to_dataframe(
+        self, X: Optional[pd.DataFrame] = None, y: Optional[pd.Series] = None
+    ):
+        """
+        Returns a DataFrame for each leaf node with path conditions.
+        If X and y are provided, also includes event/non-event counts.
+        Columns always: Round, Tree, NodeID, PathCondition, Samples, Value
+        If X and y are provided: adds Events, NonEvents, EventRate
+        """
+        leaf_data = self.extract_leaf_nodes_with_conditions()
+        results = []
+        # If X and y are provided, preprocess and calculate event stats
+        if X is not None and y is not None:
+            X_encoded = self._woe_encode(X, fit=False)
+            if hasattr(X, "columns"):
+                X_encoded = pd.DataFrame(X_encoded, columns=self.feature_names_)
+            for _, row in leaf_data.iterrows():
+                path_cond = row["PathCondition"]
+                if path_cond is None:
+                    mask = pd.Series([True] * len(X_encoded))
+                else:
+                    try:
+                        mask = X_encoded.query(path_cond).index
+                    except (ValueError, KeyError) as e:
+                        print(f"Skipping leaf {row['NodeID']} due to query error: {e}")
+                        continue
+                y_leaf = y.loc[mask] if isinstance(y, pd.Series) else y[mask]
+                n_class_1 = (y_leaf == 1).sum()
+                n_class_0 = (y_leaf == 0).sum()
+                total = n_class_0 + n_class_1
+                event_rate = n_class_1 / total if total > 0 else float("nan")
+                results.append(
+                    {
+                        "Round": row["Round"],
+                        "Tree": row["Tree"],
+                        "NodeID": row["NodeID"],
+                        "PathCondition": path_cond,
+                        "Samples": row["Samples"],
+                        "Value": row["Value"],
+                        "Events": n_class_1,
+                        "NonEvents": n_class_0,
+                        "EventRate": event_rate,
+                    }
+                )
+        else:
+            # Only report what we have from the tree structure
+            results.extend(
+                {
+                    "Round": row["Round"],
+                    "Tree": row["Tree"],
+                    "NodeID": row["NodeID"],
+                    "PathCondition": row["PathCondition"],
+                    "Samples": row["Samples"],
+                    "Value": row["Value"],
+                }
+                for _, row in leaf_data.iterrows()
+            )
+        return pd.DataFrame(results)
