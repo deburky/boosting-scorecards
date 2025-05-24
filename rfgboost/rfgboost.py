@@ -254,11 +254,12 @@ class RFGBoost:
                 p = sigmoid(pred)
                 eps = 1e-5
                 p = np.clip(p, eps, 1 - eps)
+                variance = p * (1 - p)
                 residuals = (y_numeric - p) / (p * (1 - p))  # Working response (FHT2000)
                 rf = RandomForestRegressor(
                     **self.rf_params
                 )  # Use regression for gradients
-                rf.fit(X_encoded, residuals)
+                rf.fit(X_encoded, residuals, sample_weight=variance)
                 update = rf.predict(X_encoded)
 
             self.models.append(rf)
