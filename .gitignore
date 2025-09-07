@@ -1,0 +1,12 @@
+# Ignore compiled Python files
+__pycache__/
+*.py[cod]
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore macOS metadata
+.DS_Store
+
+# Ignore CatBoost training artifacts
+catboost_info/
