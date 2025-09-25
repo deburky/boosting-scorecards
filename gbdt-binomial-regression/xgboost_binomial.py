@@ -21,9 +21,13 @@ Notes
 
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 import xgboost as xgb
+from plotting_utils import (
+    create_combined_plot,
+    print_brier_scores,
+    print_target_samples,
+)
 from scipy.special import expit as sigmoid  # pylint: disable=no-name-in-module
 from sklearn.metrics import mean_squared_error as brier_score_loss
 
@@ -50,13 +54,12 @@ def make_synthetic(n_rows=30000, n_features=15, trials_mean=10, seed=7):
     return X, y_rate.astype(np.float32), trials.astype(np.float32), p.astype(np.float32)
 
 
-def expand_rows(X, y_rate, trials, seed=123):
+def expand_rows(X, y_rate, trials):
     """
     Expand aggregated rows into Bernoulli observations:
     For i with n_i trials and rate y_i, create n_i rows with target in {0,1}.
     WARNING: This explodes row count; only for small demos.
     """
-    rng = np.random.default_rng(seed)
     n = X.shape[0]
     counts = trials.astype(int)
     total = int(np.sum(counts))
@@ -69,9 +72,9 @@ def expand_rows(X, y_rate, trials, seed=123):
         k = counts[i]
         end = start + k
         X_exp[start:end] = X[i]
-        y_exp[start:end] = rng.binomial(1, p=float(y_rate[i]), size=k).astype(
-            np.float32
-        )
+        successes = int(round(y_rate[i] * k))  # recover successes
+        y_exp[start : start + successes] = 1.0
+        y_exp[start + successes : end] = 0.0
         start = end
 
     return X_exp, y_exp
@@ -129,22 +132,6 @@ def rmse_per_row(p_hat, y_rate):
     return float(np.sqrt(np.mean((p_hat - y_rate) ** 2)))
 
 
-def calibration_curve(p_hat, y_rate, n_bins=20):
-    """
-    Bin predictions into equal-width bins, return (avg_pred, avg_true) per bin.
-    """
-    bins = np.linspace(0.0, 1.0, n_bins + 1)
-    idx = np.digitize(p_hat, bins) - 1
-    avg_pred, avg_true = [], []
-    for b in range(n_bins):
-        mask = idx == b
-        if not np.any(mask):
-            continue
-        avg_pred.append(float(np.mean(p_hat[mask])))
-        avg_true.append(float(np.mean(y_rate[mask])))
-    return np.array(avg_pred), np.array(avg_true)
-
-
 # ---------------------------
 # Main
 # ---------------------------
@@ -160,7 +147,7 @@ def main():  # sourcery skip: extract-duplicate-method
     X_tr, X_va = X[tr_idx], X[va_idx]
     y_tr, y_va = y_rate[tr_idx], y_rate[va_idx]
     w_tr, w_va = trials[tr_idx], trials[va_idx]
-    p_true_va = p_true[va_idx]
+    _ = p_true[va_idx]
 
     # 2) Aggregated training (custom objective)
     dtrain = xgb.DMatrix(X_tr, label=y_tr, weight=w_tr)
@@ -193,8 +180,8 @@ def main():  # sourcery skip: extract-duplicate-method
     p_va_agg = sigmoid(logit_va_agg)
 
     # 3) Expanded Bernoulli baseline (for comparison on small data only)
-    X_tr_exp, y_tr_exp = expand_rows(X_tr, y_tr, w_tr, seed=11)
-    X_va_exp, y_va_exp = expand_rows(X_va, y_va, w_va, seed=22)
+    X_tr_exp, y_tr_exp = expand_rows(X_tr, y_tr, w_tr)
+    X_va_exp, y_va_exp = expand_rows(X_va, y_va, w_va)
 
     dtrain_exp = xgb.DMatrix(X_tr_exp, label=y_tr_exp)
     dvalid_exp = xgb.DMatrix(X_va_exp, label=y_va_exp)
@@ -230,73 +217,36 @@ def main():  # sourcery skip: extract-duplicate-method
     nll_exp = binom_nll_per_row(p_va_exp, y_va, w_va)
     rmse_agg = rmse_per_row(p_va_agg, y_va)
     rmse_exp = rmse_per_row(p_va_exp, y_va)
+    brier_agg = brier_score_loss(y_va, p_va_agg)
+    brier_exp = brier_score_loss(y_va, p_va_exp)
 
     print("=== Validation Summary ===")
     print(
         f"Aggregated (custom obj): binom_nll={nll_agg:.6f}, rmse={rmse_agg:.6f}, train_time_s={t_agg:.2f}, rows_train={X_tr.shape[0]}, rows_valid={X_va.shape[0]}"
     )
     print(
-        f"Expanded Bernoulli     : binom_nll={nll_exp:.6f}, rmse={rmse_exp:.6f}, train_time_s={t_exp:.2f}, rows_train={X_tr_exp.shape[0]}, rows_valid={X_va_exp.shape[0]}"
+        f"Expanded Bernoulli: binom_nll={nll_exp:.6f}, rmse={rmse_exp:.6f}, train_time_s={t_exp:.2f}, rows_train={X_tr_exp.shape[0]}, rows_valid={X_va_exp.shape[0]}"
     )
 
-    # 5) Plots (one figure per plot; no seaborn; no styles)
-    # a) Metric comparison bar chart
-    metrics = ["Binom NLL", "RMSE", "Train time (s)"]
-    agg_vals = [nll_agg, rmse_agg, t_agg]
-    exp_vals = [nll_exp, rmse_exp, t_exp]
-    x = np.arange(len(metrics))
-    width = 0.35
+    # Print brier scores and target samples
+    print_brier_scores(y_va, p_va_agg, p_va_exp, "Binomial", "Log Loss")
+    print_target_samples(y_va, y_va_exp, "Aggregated", "Expanded")
 
-    plt.figure()
-    plt.bar(x - width / 2, agg_vals, width, label="Aggregated")
-    plt.bar(x + width / 2, exp_vals, width, label="Expanded")
-    plt.xticks(x, metrics)
-    plt.legend()
-    plt.title("Validation metrics and train time")
-    plt.tight_layout()
-    plt.show()
-
-    # b) Calibration curves (bin avg predicted vs observed)
-    avg_pred_agg, avg_true_agg = calibration_curve(p_va_agg, y_va, n_bins=20)
-    avg_pred_exp, avg_true_exp = calibration_curve(p_va_exp, y_va, n_bins=20)
-
-    # Print brier scores
-    print(f"Brier score (Aggregated): {brier_score_loss(y_va, p_va_agg)}")
-    print(f"Brier score (Expanded): {brier_score_loss(y_va, p_va_exp)}")
-
-    print(f"Target (Aggregated): {y_va[:10]}")
-    print(f"Target (Expanded): {y_va_exp[:10]}")
-
-    plt.figure()
-    plt.plot(avg_pred_agg, avg_true_agg, marker="o", linestyle="-", label="Aggregated")
-    plt.plot(avg_pred_exp, avg_true_exp, marker="o", linestyle="-", label="Expanded")
-    plt.plot([0, 1], [0, 1], linestyle="--")
-    plt.xlabel("Predicted probability (bin avg)")
-    plt.ylabel("Observed success rate (bin avg)")
-    plt.title("Calibration curves")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-    # c) Predicted vs true scatter (aggregated)
-    plt.figure()
-    plt.scatter(p_true_va, p_va_agg, s=5, alpha=0.5)
-    plt.plot([0, 1], [0, 1], linestyle="--")
-    plt.xlabel("True p (oracle)")
-    plt.ylabel("Predicted p")
-    plt.title("Predicted vs True p – Aggregated")
-    plt.tight_layout()
-    plt.show()
-
-    # d) Predicted vs true scatter (expanded)
-    plt.figure()
-    plt.scatter(p_true_va, p_va_exp, s=5, alpha=0.5)
-    plt.plot([0, 1], [0, 1], linestyle="--")
-    plt.xlabel("True p (oracle)")
-    plt.ylabel("Predicted p")
-    plt.title("Predicted vs True p – Expanded")
-    plt.tight_layout()
-    plt.show()
+    # Create combined plot using shared plotting utilities
+    create_combined_plot(
+        p_va_agg=p_va_agg,
+        p_va_exp=p_va_exp,
+        y_va=y_va,
+        nll_agg=nll_agg,
+        nll_exp=nll_exp,
+        rmse_agg=rmse_agg,
+        rmse_exp=rmse_exp,
+        t_agg=t_agg,
+        t_exp=t_exp,
+        filename="xgboost_binomial.png",
+        agg_label="Binomial",
+        exp_label="Log Loss",
+    )
 
 
 if __name__ == "__main__":
