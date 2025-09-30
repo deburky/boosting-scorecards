@@ -1,0 +1,13 @@
+[project]
+name = "mlflow-shap"
+version = "0.1.0"
+description = "MLflow with SHAP"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "catboost>=1.2.8",
+    "mlflow>=3.4.0",
+    "numpy>=2.3.3",
+    "pandas>=2.3.2",
+    "shap>=0.48.0",
+]

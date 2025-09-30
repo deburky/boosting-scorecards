@@ -1,0 +1,90 @@
+# Ignore compiled Python files
+__pycache__/
+*.py[cod]
+
+# Ignore Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore macOS metadata
+.DS_Store
+
+# Ignore CatBoost training artifacts
+catboost_info/
+
+# Ignore MLflow tracking data
+mlruns/
+mlartifacts/
+
+# Ignore model artifacts and temporary files
+*.cbm
+*.pkl
+*.joblib
+*.h5
+*.hdf5
+
+# Ignore log files
+*.log
+*.out
+
+# Ignore temporary directories
+tmp/
+temp/
+.trunk/
+BoostARoota/
+Information-Theoretic-for-Credit-Modeling/
+ML_SageMaker_Studies-master/
+RP-2023/
+applied-credit-risk/
+awesome-mlops/
+boosting-scorecards/.gitignore
+boosting-scorecards/README.md
+boosting-scorecards/boosted_scorecard.py
+boosting-scorecards/catboost-incremental/
+boosting-scorecards/catboost-scorecards/
+boosting-scorecards/custom_importance.png
+boosting-scorecards/fastwoe/
+boosting-scorecards/fonts/
+boosting-scorecards/gbdt-binomial-regression/
+boosting-scorecards/get_credit_scores.py
+boosting-scorecards/heloc_dataset_v1.csv
+boosting-scorecards/how-scoring-works.gif
+boosting-scorecards/interpretable_boosted_scorecards.ipynb
+boosting-scorecards/learning_curve.gif
+boosting-scorecards/marimo-notebooks/
+boosting-scorecards/other_notebooks/
+boosting-scorecards/requirements.txt
+boosting-scorecards/rfgboost/
+boosting-scorecards/score_distribution_animation_depth.gif
+boosting-scorecards/score_distribution_animation_estimators.gif
+boosting-scorecards/scorecard-boosting-demo/
+boosting-scorecards/scripts/
+boosting-scorecards/tree.png
+boosting-scorecards/trees.png
+boosting-scorecards/xgb-scorecard-constructor/
+calibration/
+cayman/
+chefboost/
+credit-risk-models/
+deburky.github.io/
+docker-jupyter/
+explainable-credit-risk-models/
+free-threaded-python/
+getting-started/
+gh-pages/
+graphs-credit-risk/
+horizontal-federated-learning-blog/
+interpretability-backtesting/
+language-models/
+lgd-scoring-models/
+measuring-benefits-of-model-use/
+midnight/
+nifty/
+open-webui/
+primer/
+profit-scoring/
+psd2-tpp-docs/
+showcase/
+simple-java-maven-app/
+tiny_python_projects/
+xgbfir/
+xml-scoring/

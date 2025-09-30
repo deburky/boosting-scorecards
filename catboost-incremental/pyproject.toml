@@ -1,0 +1,27 @@
+[project]
+name = "catboost-incremental"
+version = "0.1.0"
+description = "Incremental CatBoost"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "aioredis>=2.0.1",
+    "catboost>=1.2.7",
+    "celery[redis]>=5.4.0",
+    "fastapi>=0.115.11",
+    "fastparquet>=2024.11.0",
+    "httpx>=0.28.1",
+    "ipykernel>=6.29.5",
+    "ipywidgets>=8.1.5",
+    "isort>=6.0.1",
+    "orjson>=3.10.15",
+    "pandas>=2.2.3",
+    "pyarrow>=19.0.1",
+    "requests>=2.32.3",
+    "rich>=13.9.4",
+    "ruff>=0.9.10",
+    "scikit-learn>=1.6.1",
+    "tqdm>=4.67.1",
+    "typer>=0.15.2",
+    "uvicorn>=0.34.0",
+]

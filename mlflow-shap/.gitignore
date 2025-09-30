@@ -1,0 +1,5 @@
+mlruns/
+catboost_info/
+.venv/
+.vscode/
+.ruff_cache/
