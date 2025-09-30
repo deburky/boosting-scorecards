@@ -84,7 +84,7 @@ def log_model_with_shap(
         # Advanced SHAP configuration for CatBoost
         shap_config = {
             "log_explainer": False,  # Save the explainer model
-            "explainer_type": "tree",  # Use tree explainer for tree models
+            "explainer_type": "TreeExplainer",  # Use tree explainer
             "max_error_examples": 100,  # Number of error cases to explain
             "log_model_explanations": True,  # Log individual prediction explanations
         }
