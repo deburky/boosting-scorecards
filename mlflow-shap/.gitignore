@@ -3,3 +3,5 @@ catboost_info/
 .venv/
 .vscode/
 .ruff_cache/
+outputs/
+__pycache__/

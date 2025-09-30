@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script to load and use the saved SHAP explainer from MLflow Model Registry
+Test script to load and use the saved SHAP explainer from MLflow Model Registry.
 """
 
 import traceback
@@ -31,12 +31,11 @@ def create_test_data():
 
 def load_model_and_explainer():
     """Load both the CatBoost model and SHAP explainer from MLflow."""
-
     print("=== Loading Models from MLflow Model Registry ===\n")
 
     # Load the CatBoost model
     print("1. Loading CatBoost model...")
-    model_uri = "models:/catboost_shap_model/latest"
+    model_uri = "models:/catboost_model/latest"
     catboost_model = mlflow.catboost.load_model(model_uri)
     print("✓ CatBoost model loaded successfully")
     print(f"Model type: {type(catboost_model)}")
@@ -46,14 +45,13 @@ def load_model_and_explainer():
     explainer_uri = "models:/catboost_shap_model_explainer/latest"
     shap_explainer = mlflow.pyfunc.load_model(explainer_uri)
     print("✓ SHAP explainer loaded successfully")
-    print(f"   Explainer type: {type(shap_explainer)}")
+    print(f"Explainer type: {type(shap_explainer)}")
 
     return catboost_model, shap_explainer
 
 
 def test_explainer_functionality(catboost_model, shap_explainer, X_test, feature_names):
     """Test the loaded explainer functionality."""
-
     print("\n=== Testing SHAP Explainer Functionality ===\n")
 
     # Test 1: Make predictions with CatBoost model
@@ -78,10 +76,8 @@ def test_explainer_functionality(catboost_model, shap_explainer, X_test, feature
 
         # Test 3: Analyze SHAP values
         print("\n5. Analyzing SHAP values...")
-        print(f"   Mean absolute SHAP value: {np.abs(shap_values).mean():.4f}")
-        print(
-            f"   SHAP value range: [{shap_values.min():.4f}, {shap_values.max():.4f}]"
-        )
+        print(f"Mean absolute SHAP value: {np.abs(shap_values).mean():.4f}")
+        print(f"SHAP value range: [{shap_values.min():.4f}, {shap_values.max():.4f}]")
 
         # Show feature importance based on SHAP values
         feature_importance = np.abs(shap_values).mean(axis=0)
@@ -89,10 +85,10 @@ def test_explainer_functionality(catboost_model, shap_explainer, X_test, feature
             {"feature": feature_names, "shap_importance": feature_importance}
         ).sort_values("shap_importance", ascending=False)
 
-        print("\n   Top 5 features by SHAP importance:")
+        print("\nTop 5 features by SHAP importance:")
         # sourcery skip: no-loop-in-tests
         for i, (_, row) in enumerate(importance_df.head().iterrows()):
-            print(f"   {i + 1}. {row['feature']}: {row['shap_importance']:.4f}")
+            print(f"{i + 1}. {row['feature']}: {row['shap_importance']:.4f}")
 
         # Test 4: Show individual prediction explanation
         print("\n6. Individual prediction explanation (first sample):")
@@ -103,7 +99,7 @@ def test_explainer_functionality(catboost_model, shap_explainer, X_test, feature
 
         # Show which features contributed most to this prediction
         sample_shap = shap_values[0]
-        feature_contrib = list(zip(feature_names, sample_shap))
+        feature_contrib = list(zip(feature_names, sample_shap, strict=False))
         feature_contrib.sort(key=lambda x: abs(x[1]), reverse=True)
 
         print("\nTop 3 features contributing to this prediction:")
@@ -120,7 +116,6 @@ def test_explainer_functionality(catboost_model, shap_explainer, X_test, feature
 
 def compare_with_fresh_explainer(catboost_model, X_sample):
     """Compare loaded explainer with a fresh one to verify correctness."""
-
     print("\n=== Comparing with Fresh SHAP Explainer ===\n")
 
     print("7. Creating fresh SHAP explainer for comparison...")
@@ -150,7 +145,6 @@ def setup_test_environment():
 
 def main():
     """Main function to test the saved SHAP explainer"""
-
     try:
         # Setup test environment
         X_test, feature_names = setup_test_environment()
