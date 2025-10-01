@@ -67,7 +67,7 @@ max-line-length = 88
 
 [tool.pylint.basic]
 # Allow single letter variable names (common in ML: X, y)
-good-names = ["i", "j", "k", "ex", "Run", "_", "X", "y"]
+good-names = ["i", "j", "k", "ex", "Run", "_", "X", "y", "X_train", "y_train", "X_test"]
 
 [dependency-groups]
 dev = [

@@ -1,0 +1,22 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 497487485332.dkr.ecr.us-east-1.amazonaws.com
+  build:
+    commands:
+      - echo Build started on date
+      - echo Building the Docker image...
+      - docker build -t catboost-mlflow-container .
+      - docker tag catboost-mlflow-container:latest 497487485332.dkr.ecr.us-east-1.amazonaws.com/catboost-mlflow-container:latest
+  post_build:
+    commands:
+      - echo Pushing the Docker image to ECR...
+      - docker push 497487485332.dkr.ecr.us-east-1.amazonaws.com/catboost-mlflow-container:latest
+      - echo Build completed on date
+
+artifacts:
+  files:
+    - '**/*'
