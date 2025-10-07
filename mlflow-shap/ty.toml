@@ -1,7 +1,0 @@
-# ty type checker configuration
-
-[rules]
-# Disable specific rules that are problematic for Jupyter notebooks
-unresolved-reference = "ignore"
-possibly-unbound-attribute = "ignore"
-possibly-unbound-import = "ignore"

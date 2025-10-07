@@ -7,10 +7,15 @@ requires-python = ">=3.11"
 dependencies = [
     "catboost>=1.2.8",
     "mlflow>=3.4.0",
-    "numpy>=2.3.3",
+    "numpy>=1.26.0,<2.0",
     "pandas>=2.3.2",
     "shap>=0.48.0",
     "xgboost>=3.0.5",
+    "boto3>=1.34.0",
+    "awswrangler>=3.0.0",
+    "imbalanced-learn>=0.11.0",
+    "sagemaker>=2.200.0",
+    "sagemaker-mlflow>=0.1.0",
 ]
 
 [tool.ruff.lint]
@@ -69,7 +74,18 @@ max-line-length = 88
 # Allow single letter variable names (common in ML: X, y)
 good-names = ["i", "j", "k", "ex", "Run", "_", "X", "y", "X_train", "y_train", "X_test"]
 
+[tool.ty]
+# ty type checker configuration
+
+[tool.ty.rules]
+# Disable specific rules that are problematic for Jupyter notebooks
+unresolved-reference = "ignore"
+possibly-unbound-attribute = "ignore"
+possibly-unbound-import = "ignore"
+unresolved-attribute = "ignore"
+
 [dependency-groups]
 dev = [
     "ruff>=0.13.2",
+    "ty>=0.0.1a21",
 ]
