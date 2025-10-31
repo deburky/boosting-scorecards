@@ -1,0 +1,52 @@
+# GitGuardian configuration for SageMaker Pipeline Blueprints
+# All credentials, account IDs, and ARNs in this directory are EXAMPLES ONLY
+
+version: v1
+
+# Ignore all example files - they contain placeholder credentials
+paths-ignore:
+  - "**/*_example.py"
+  - "**/config_example.py"
+  - "**/*.ipynb"
+  - "**/README.md"
+  - "**/stubs/**"
+  - "**/examples/**"
+  - "**/docs/**"
+
+# Specific example values to ignore (literal strings only)
+matches-ignore:
+  - name: Example AWS Account ID 1
+    match: "497487485332"
+  
+  - name: Example AWS Account ID 2
+    match: "123456789012"
+  
+  - name: Example SSM Parameter Path
+    match: "/PROD/REDSHIFT_PASSWORD"
+  
+  # Add specific ARN examples as you encounter them
+  - name: Example SageMaker Role ARN
+    match: "arn:aws:iam::497487485332:role/AmazonSageMaker-ExecutionRole"
+  
+  - name: Example S3 ARN
+    match: "arn:aws:s3:::my-s3-bucket"
+  
+  - name: Example KMS ARN
+    match: "arn:aws:kms:us-east-1:497487485332:key/"
+  
+  - name: Example ECR URL 1
+    match: "497487485332.dkr.ecr.us-east-1.amazonaws.com"
+  
+  - name: Example ECR URL 2
+    match: "123456789012.dkr.ecr.us-west-2.amazonaws.com"
+
+# Generic placeholder patterns
+exclude:
+  - "AmazonSageMaker-ExecutionRole"
+  - "AWSGlueServiceRoleDefault"
+  - "my-s3-bucket"
+  - "my-redshift-cluster"
+  - "sagemaker-mlflow-3"
+  - "example-bucket"
+  - "test-bucket"
+  - "demo-bucket"

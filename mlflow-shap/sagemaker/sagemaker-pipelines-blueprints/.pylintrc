@@ -1,0 +1,25 @@
+[MASTER]
+# Add stubs directory to import path for type checking
+init-hook='import sys; import os; sys.path.insert(0, os.path.join(os.path.dirname(__file__), "stubs"))'
+
+[MESSAGES CONTROL]
+# Disable warnings that are acceptable in blueprint/example code
+disable=
+    broad-exception-caught,
+    logging-fstring-interpolation,
+    too-many-locals,
+    too-many-statements,
+    too-many-branches
+
+[FORMAT]
+# Maximum line length
+max-line-length=100
+
+[DESIGN]
+# Maximum number of arguments for function / method
+max-args=10
+
+# Maximum number of attributes for a class
+max-attributes=15
+
+

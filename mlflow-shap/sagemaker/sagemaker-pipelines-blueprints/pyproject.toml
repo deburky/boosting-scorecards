@@ -1,0 +1,32 @@
+# SageMaker Pipeline Blueprints Configuration
+
+[tool.pylint.MASTER]
+# Add stubs directory to Python path for type checking
+init-hook = 'import sys; import os; sys.path.append(os.path.join(os.path.dirname(__file__), "stubs"))'
+
+[tool.pylint.MESSAGES_CONTROL]
+# Disable specific warnings that are acceptable in example/blueprint code
+disable = [
+    "broad-exception-caught",  # Generic Exception catches are OK for robustness
+    "logging-fstring-interpolation",  # We use lazy formatting, but some remain
+]
+
+[tool.mypy]
+# Type checking configuration
+mypy_path = "./stubs"
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Allow untyped defs in example code
+ignore_missing_imports = true  # Don't fail on missing type stubs for all packages
+
+[tool.black]
+line-length = 88
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+
