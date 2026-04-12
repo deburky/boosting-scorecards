@@ -1,5 +1,5 @@
 """
-Article visual: WOE recalibration via fastwoe.finetune()
+WOE recalibration via fastwoe.finetune()
 
 Generates a dumbbell chart showing base vs finetuned WOE per bin
 for a single risk driver (Debt-to-Income), with confidence intervals.
@@ -76,9 +76,9 @@ NEW_PERFORMANCE: dict[str, list[tuple[str, float, float]]] = {
     ],
 }
 
-# --------------------------------------------------------------------------- #
-# Palette
-# --------------------------------------------------------------------------- #
+#-----------------------------------------------------------------------------------------------
+# Plotting palette
+#-----------------------------------------------------------------------------------------------
 C_BASE = "#1d4ed8"
 C_ADAPT = "#ea580c"
 C_MUTED = "#64748b"
@@ -86,6 +86,7 @@ C_GRID = "#e2e8f0"
 
 
 def configure_style() -> None:
+    """Configure the plotting style."""
     plt.rcParams.update(
         {
             "figure.facecolor": "white",
@@ -115,11 +116,11 @@ def configure_style() -> None:
         }
     )
 
-
-# --------------------------------------------------------------------------- #
+#-----------------------------------------------------------------------------------------------
 # Synthetic data
-# --------------------------------------------------------------------------- #
+#-----------------------------------------------------------------------------------------------
 def _logit(p: float) -> float:
+    """Calculate the logit of a probability."""
     p = float(np.clip(p, 1e-9, 1.0 - 1e-9))
     return float(np.log(p / (1.0 - p)))
 
@@ -127,6 +128,7 @@ def _logit(p: float) -> float:
 def global_event_rate(
     feature_defs: dict[str, list[tuple[str, float, float]]],
 ) -> float:
+    """Calculate the global event rate from feature definitions."""
     total_bad = total_good = 0.0
     for bins in feature_defs.values():
         for _, bad, good in bins:
@@ -136,6 +138,7 @@ def global_event_rate(
 
 
 def woe_bin_table(bins: list[tuple[str, float, float]], p_prior: float) -> dict[str, float]:
+    """Calculate the WOE for each bin."""
     lp0 = _logit(p_prior)
     return {lab: _logit(bad / (bad + good)) - lp0 for lab, bad, good in bins}
 
@@ -143,6 +146,7 @@ def woe_bin_table(bins: list[tuple[str, float, float]], p_prior: float) -> dict[
 def marginal_labels_probs(
     bins: list[tuple[str, float, float]],
 ) -> tuple[list[str], np.ndarray]:
+    """Calculate the marginal labels and probabilities."""
     labels = [b[0] for b in bins]
     w = np.array([b[1] + b[2] for b in bins], dtype=float)
     return labels, w / w.sum()
@@ -156,6 +160,7 @@ def make_synthetic_panel(
     *,
     target_bins: list[tuple[str, float, float]] | None = None,
 ) -> tuple[pd.DataFrame, pd.Series]:
+    """Generate a synthetic panel of data."""
     p_prior = global_event_rate(feature_defs)
     bins_for_target = target_bins or feature_defs[target_feature]
 
@@ -188,9 +193,9 @@ def make_synthetic_panel(
     return X, y_s
 
 
-# --------------------------------------------------------------------------- #
+#-----------------------------------------------------------------------------------------------
 # Plotting
-# --------------------------------------------------------------------------- #
+#-----------------------------------------------------------------------------------------------
 def plot_woe_recalibration(
     base_fw: FastWoe,
     finetuned_fw: FastWoe,
@@ -290,7 +295,7 @@ def plot_score_distribution(
     y: pd.Series,
     path: Path,
 ) -> None:
-    """Overlapping histograms: Turing score distribution for base vs finetuned."""
+    """Plot score distribution for base and finetuned models."""
     # Scorecard points: Offset - Factor * WOE_sum (lower risk = higher score)
     OFFSET = 500
     FACTOR = 100
@@ -372,9 +377,7 @@ def main() -> None:
     configure_style()
     rng = np.random.default_rng(RNG_SEED)
 
-    # ---------------------------------------------------------------------- #
-    # Generate data
-    # ---------------------------------------------------------------------- #
+    # Generate synthetic data
     X_dev, y_dev = make_synthetic_panel(N_SAMPLES, FEATURES, TARGET_FEATURE, rng)
     X_new, y_new = make_synthetic_panel(
         N_SAMPLES,
@@ -384,25 +387,17 @@ def main() -> None:
         target_bins=NEW_PERFORMANCE[TARGET_FEATURE],
     )
 
-    # ---------------------------------------------------------------------- #
-    # Fit base model
-    # ---------------------------------------------------------------------- #
+    # Fit base FastWoe model
     base_fw = FastWoe(random_state=RNG_SEED).fit(X_dev, y_dev)
 
-    # ---------------------------------------------------------------------- #
-    # Finetune one feature
-    # ---------------------------------------------------------------------- #
+    # Fine-tune one feature
     finetuned_fw = copy.deepcopy(base_fw)
     finetuned_fw.finetune(X_new[[TARGET_FEATURE]], y_new)
 
-    # ---------------------------------------------------------------------- #
-    # Print comparison
-    # ---------------------------------------------------------------------- #
+    # Print comparison of base and finetuned WOE
     label_order = [b[0] for b in FEATURES[TARGET_FEATURE]]
 
-    print(f"\n{'=' * 60}")
-    print(f"  {TARGET_FEATURE}: base vs finetuned WOE")
-    print(f"{'=' * 60}\n")
+    print(f"{TARGET_FEATURE}: base vs finetuned WOE")
 
     m0 = base_fw.mappings_[TARGET_FEATURE]
     m1 = finetuned_fw.mappings_[TARGET_FEATURE]
@@ -419,9 +414,9 @@ def main() -> None:
     print(f"\nIV:  base = {fs0['iv']:.4f}  ->  finetuned = {fs1['iv']:.4f}")
     print(f"Gini: base = {fs0['gini']:.4f}  ->  finetuned = {fs1['gini']:.4f}")
 
-    # ---------------------------------------------------------------------- #
-    # Plot
-    # ---------------------------------------------------------------------- #
+    #-----------------------------------------------------------------------------------------------
+    # Plot WOE recalibration and score distribution
+    #-----------------------------------------------------------------------------------------------
     plot_woe_recalibration(
         base_fw,
         finetuned_fw,
